@@ -18,7 +18,13 @@ nightmare
     })
     .end()
     .then(urls => {
-        let links = [...new Set(urls)];
+        let links = [];
+        [...new Set(urls)].forEach(href => {
+            let link = new URL(href);
+            if (link.origin == url.origin) {
+                links.push(link.origin + link.pathname);
+            }
+        });
         parentPort.postMessage(links);
     })
     .catch(err => console.log(err));
