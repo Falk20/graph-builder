@@ -9,7 +9,7 @@ const url = new URL(workerData);
 nightmare
     .goto(url)
     .wait()
-    .evalute(() => {
+    .evaluate(() => {
         let anchors = [];
         Array.prototype.forEach.call(document.querySelectorAll('a'), (a) => {
             anchors.push(a.href);
