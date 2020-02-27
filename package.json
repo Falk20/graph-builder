@@ -1,0 +1,8 @@
+{
+  "name": "graph-builder",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/Falk20/graph-builder.git",
+  "author": "falk",
+  "license": "MIT"
+}
