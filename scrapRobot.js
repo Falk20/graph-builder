@@ -12,7 +12,16 @@ nightmare
     .evaluate(() => {
         let anchors = [];
         Array.prototype.forEach.call(document.querySelectorAll('a'), (a) => {
-            anchors.push(a.href);
+            if (a.href !== '') {
+                let check = a.pathname;
+                if (check.includes('.')) {
+                    if (/(\.(html?|php))$/.test(check)) {
+                        anchors.push(a.href);
+                    }
+                } else {
+                    anchors.push(a.href);
+                }
+            }
         });
         return anchors;
     })
