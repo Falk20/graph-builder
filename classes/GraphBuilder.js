@@ -3,82 +3,64 @@ const EventEmitter = require("events");
 const GraphNode = require('./GraphNode');
 const GraphEdge = require('./GraphEdge');
 
-let eventName = 'graph-nodes-change';
+let threadReleased = 'thread-released';
+let change = 'change-node';
 
 class GraphBuilder extends EventEmitter {
   constructor(threadCount) {
     super();
     this.graphNodes = [];
     this.graphEdges = [];
-    this.idleThread = threadCount;
+    this.idleThread = this.maxThread = threadCount;
+    this.on(change, () => {
 
-    this.on(eventName, () => {
+    });
+
+    this.on(threadReleased, () => {
+      console.log('поток свободен');
       console.log(this.graphNodes.length);
-      console.log('потоков: ' + this.idleThread);
-
-      let checkingNode = this.graphNodes.find((node) => !node.checked);
-      checkingNode.checked = true;
-      console.log(checkingNode);
-
-      if (this.idleThread > 0) {
-        this.idleThread--;
-
-        this.analizeNode(checkingNode)
-          .then(newLinks => {
-            this.idleThread++;
-            newLinks.forEach(newLink => {
-              if (this.graphNodes.findIndex(node => node.id === newLink) == -1) {
-                this.addNode(newLink, checkingNode.id);
-
-              }
-            });
-          });
+      if (this.graphNodes.length < 500) {
+        while (this.idleThread > 0 && this.graphNodes.findIndex(node => !node.checked) !== -1) {
+          let chekingNode = this.graphNodes.find(node => !node.checked);
+          this.analizeOneNode(chekingNode);
+        }
+      } else {
+        console.log(this.graphNodes);
       }
-
     });
   }
 
-  analizeNode(checkingNode) {
-    return new Promise((resolve, reject) => {
-      const scrapingRobot = new Worker('../scrapRobot.js', { workerData: checkingNode.id });
+  analizeOneNode(checkingNode) {
+    const scrapingRobot = new Worker('./scrapRobot.js', { workerData: checkingNode.id });
+    checkingNode.checked = true;
+    this.idleThread--;
+    scrapingRobot.on('message', (newLinks) => {
+      this.idleThread++;
 
-      scrapingRobot.on('message', (newLinks) => {
-
-        resolve(newLinks);
+      newLinks.forEach(link => {
+        this.addNode(link);
       });
-      scrapingRobot.on('error', reject);
-      scrapingRobot.on('exit', (code) => {
-        if (code !== 0)
-          reject(new Error(`Worker stopped with exit code ${code}`));
-      });
+      this.emit(threadReleased);
     });
+    scrapingRobot.on('error', err => console.log(err));
+    scrapingRobot.on('exit', (code) => {
+      if (code !== 0)
+        console.log(new Error(`Worker stopped with exit code ${code}`));
+    });
+  }
+
+  addNode(link) {
+    if (this.graphNodes.findIndex(node => node.id === link) == -1) {
+      let url = new URL(link);
+      let node = new GraphNode(url.pathname, url.href);
+      this.graphNodes.push(node);
+    }
   }
 
   runAnalize(startLink) {
     this.addNode(startLink);
-  }
-
-  addNode(url, from = '') {
-    url = new URL(url);
-    let node;
-    if (this.graphNodes.findIndex(node => node.id === url.href) == -1) {
-      node = new GraphNode(decodeURI(url.pathname), url.href);
-      this.graphNodes.push(node);
-      this.addEdge(from, node.id);
-    }
-    this.emit(eventName, node);
-  }
-
-  addEdge(from, to) {
-    let edge = new GraphEdge(from, to);
-    this.graphEdges.push(edge);
-    console.log(edge);
+    this.analizeOneNode(this.graphNodes[0]);
   }
 }
-
-let graph = new GraphBuilder(4);
-
-graph.runAnalize('https://www.anilibria.tv/');
-
 
 module.exports = GraphBuilder;
