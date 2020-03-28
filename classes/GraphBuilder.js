@@ -4,7 +4,6 @@ const GraphNode = require('./GraphNode');
 const GraphEdge = require('./GraphEdge');
 
 let threadReleased = 'thread-released';
-let change = 'change-node';
 
 class GraphBuilder extends EventEmitter {
   constructor(threadCount) {
@@ -12,20 +11,15 @@ class GraphBuilder extends EventEmitter {
     this.graphNodes = [];
     this.graphEdges = [];
     this.idleThread = this.maxThread = threadCount;
-    this.on(change, () => {
-
-    });
 
     this.on(threadReleased, () => {
-      console.log('поток свободен');
-      console.log(this.graphNodes.length);
-      if (this.graphNodes.length < 500) {
-        while (this.idleThread > 0 && this.graphNodes.findIndex(node => !node.checked) !== -1) {
-          let chekingNode = this.graphNodes.find(node => !node.checked);
-          this.analizeOneNode(chekingNode);
-        }
-      } else {
-        console.log(this.graphNodes);
+      console.log(`кол-во свободных потоков: ${this.idleThread - 1}`);
+      console.log(`кол-во узлов графа: ${this.graphNodes.length}`);
+      console.log(`кол-во граней графа: ${this.graphEdges.length}`);
+
+      while (this.idleThread > 0 && this.graphNodes.findIndex(node => !node.checked) !== -1) {
+        let chekingNode = this.graphNodes.find(node => !node.checked);
+        this.analizeOneNode(chekingNode);
       }
     });
   }
@@ -38,7 +32,7 @@ class GraphBuilder extends EventEmitter {
       this.idleThread++;
 
       newLinks.forEach(link => {
-        this.addNode(link);
+        this.addNode(link, checkingNode.id);
       });
       this.emit(threadReleased);
     });
@@ -49,11 +43,15 @@ class GraphBuilder extends EventEmitter {
     });
   }
 
-  addNode(link) {
+  addNode(link, parentId) {
     if (this.graphNodes.findIndex(node => node.id === link) == -1) {
       let url = new URL(link);
       let node = new GraphNode(url.pathname, url.href);
       this.graphNodes.push(node);
+      if (parentId) {
+        let edge = new GraphEdge(parentId, url.href);
+        this.graphEdges.push(edge);
+      }
     }
   }
 

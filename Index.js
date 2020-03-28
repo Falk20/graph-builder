@@ -1,5 +1,8 @@
 const GraphBuilder = require('./classes/GraphBuilder');
 // указываем число потоков
-let graph = new GraphBuilder(4);
+let treadCount = process.argv[3]? process.argv[3] > 10 ? 10 : process.argv[3] : 4;
+let graph = new GraphBuilder(treadCount);
 // указываем ссылку на ресурс для анализа
-graph.runAnalize('https://www.anilibria.tv/');
+
+//https://www.anilibria.tv/
+graph.runAnalize(process.argv[2]);
